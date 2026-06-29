@@ -1,7 +1,7 @@
 function App() {
   return (
-    <div>
-      <h1>Hello</h1>
+    <div className="bg-red-500 text-white text-4xl p-8">
+      GameDeck 🎮
     </div>
   )
 }
