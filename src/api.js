@@ -1,9 +1,10 @@
 const API_KEY = '91e1fc69cff647c5a9e53840fc3e170c'
 
-export const fetchGames = async (genre = '') => {
+export const fetchGames = async (genre = '', search = '') => {
   const genreFilter = genre ? `&genres=${genre}` : ''
+  const searchFilter = search ? `&search=${encodeURIComponent(search)}` : ''
   const res = await fetch(
-    `https://api.rawg.io/api/games?key=${API_KEY}&page_size=20&ordering=-rating${genreFilter}`
+    `https://api.rawg.io/api/games?key=${API_KEY}&page_size=20&ordering=-rating${genreFilter}${searchFilter}`
   )
   const data = await res.json()
   return data.results
