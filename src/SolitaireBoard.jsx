@@ -12,7 +12,6 @@ import {
   SortableContext,
   useSortable,
   rectSortingStrategy,
-  arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
@@ -68,7 +67,7 @@ function DroppableSlot({ number, id }) {
   )
 }
 
-export default function SolitaireBoard({ myList, setMyList }) {
+export default function SolitaireBoard({ myList, setMyList, user }) {
   const [top10, setTop10] = useState(Array(10).fill(null))
   const [activeGame, setActiveGame] = useState(null)
   const [copied, setCopied] = useState(false)
@@ -79,7 +78,6 @@ export default function SolitaireBoard({ myList, setMyList }) {
 
   const deckGames = myList.filter(g => !top10.find(t => t?.id === g.id))
 
-  // Solitaire columns — fill left to right, stack vertically
   const COLS = 7
   const columns = Array.from({ length: COLS }, () => [])
   deckGames.forEach((game, i) => {
@@ -102,13 +100,11 @@ export default function SolitaireBoard({ myList, setMyList }) {
     const game = myList.find(g => g.id === gameId)
     if (!game) return
 
-    // Dropped on empty slot
     if (overIdStr.startsWith('slot-')) {
       const slotIndex = parseInt(overIdStr.replace('slot-', ''))
       const newTop10 = [...top10]
       const prevSlot = newTop10.findIndex(t => t?.id === gameId)
       if (prevSlot !== -1) newTop10[prevSlot] = null
-      // If slot occupied swap back
       if (newTop10[slotIndex] !== null && prevSlot !== -1) {
         newTop10[prevSlot] = newTop10[slotIndex]
       }
@@ -117,13 +113,11 @@ export default function SolitaireBoard({ myList, setMyList }) {
       return
     }
 
-    // Dropped on another card in top10 — swap
     if (overIdStr.startsWith('card-')) {
       const overGameId = parseInt(overIdStr.replace('card-', ''))
       const activeSlot = top10.findIndex(t => t?.id === gameId)
       const overSlot = top10.findIndex(t => t?.id === overGameId)
 
-      // Both in top10 — swap
       if (activeSlot !== -1 && overSlot !== -1) {
         const newTop10 = [...top10]
         ;[newTop10[activeSlot], newTop10[overSlot]] = [newTop10[overSlot], newTop10[activeSlot]]
@@ -131,16 +125,13 @@ export default function SolitaireBoard({ myList, setMyList }) {
         return
       }
 
-      // From deck dropped on top10 card — replace
       if (activeSlot === -1 && overSlot !== -1) {
         const newTop10 = [...top10]
-        // Put replaced card back to deck (it stays in myList so it auto appears in deck)
         newTop10[overSlot] = game
         setTop10(newTop10)
         return
       }
 
-      // Both in deck — find first empty top10 slot
       if (activeSlot === -1 && overSlot === -1) {
         const emptySlot = top10.findIndex(t => t === null)
         if (emptySlot !== -1) {
@@ -153,7 +144,6 @@ export default function SolitaireBoard({ myList, setMyList }) {
     }
   }
 
-  // Share link
   const handleShare = async () => {
     const filled = top10.filter(Boolean)
     if (filled.length === 0) {
@@ -167,14 +157,14 @@ export default function SolitaireBoard({ myList, setMyList }) {
       rating: g.rating,
     }))
     const data = encodeURIComponent(JSON.stringify(minimal))
-    const link = `${window.location.origin}${window.location.pathname}?share=true&picks=${data}`
+    const userName = encodeURIComponent(user?.displayName || 'A Gamer')
+    const link = `${window.location.origin}${window.location.pathname}?share=true&picks=${data}&user=${userName}`
 
     try {
       await navigator.clipboard.writeText(link)
       setCopied(true)
       setTimeout(() => setCopied(false), 3000)
     } catch {
-      // Fallback
       const ta = document.createElement('textarea')
       ta.value = link
       document.body.appendChild(ta)
@@ -235,7 +225,6 @@ export default function SolitaireBoard({ myList, setMyList }) {
           </SortableContext>
         </div>
 
-        {/* DIVIDER */}
         <div className="border-t border-gray-700 mb-6" />
 
         {/* MY DECK */}
@@ -265,7 +254,6 @@ export default function SolitaireBoard({ myList, setMyList }) {
         </div>
       </div>
 
-      {/* Drag Overlay */}
       <DragOverlay>
         {activeGame && (
           <div className="rounded-xl overflow-hidden border-2 border-purple-500 w-32 shadow-2xl rotate-3 opacity-90">
