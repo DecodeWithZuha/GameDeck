@@ -3,6 +3,7 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragOverlay,
@@ -40,9 +41,9 @@ function GameCard({ game, inTop10 = false }) {
       <img
         src={game.background_image}
         alt={game.name}
-        className={`w-full object-cover ${inTop10 ? 'h-44' : 'h-36'}`}
+        className={`w-full object-cover ${inTop10 ? 'h-28 sm:h-44' : 'h-24 sm:h-36'}`}
       />
-      <div className="bg-gray-900 p-2">
+      <div className="bg-gray-900 p-1.5 sm:p-2">
         <p className="text-white text-xs font-bold truncate">{game.name}</p>
         <p className="text-yellow-400 text-xs">⭐ {game.rating}</p>
       </div>
@@ -55,14 +56,14 @@ function DroppableSlot({ number, id }) {
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-xl border-2 border-dashed h-56 flex flex-col 
+      className={`rounded-xl border-2 border-dashed h-40 sm:h-56 flex flex-col 
         items-center justify-center transition-all
         ${isOver
           ? 'border-purple-400 bg-purple-900/20'
           : 'border-gray-600 hover:border-gray-500'}`}
     >
-      <p className="text-3xl font-black text-gray-700">#{number}</p>
-      <p className="text-xs text-gray-600 mt-1">Drop here</p>
+      <p className="text-xl sm:text-3xl font-black text-gray-700">#{number}</p>
+      <p className="text-xs text-gray-600 mt-1 hidden sm:block">Drop here</p>
     </div>
   )
 }
@@ -72,13 +73,21 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
   const [activeGame, setActiveGame] = useState(null)
   const [copied, setCopied] = useState(false)
 
-  const sensors = useSensors(useSensor(PointerSensor, {
-    activationConstraint: { distance: 5 }
-  }))
+  // Both PointerSensor (desktop) and TouchSensor (mobile) support
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 }
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 }
+    })
+  )
 
   const deckGames = myList.filter(g => !top10.find(t => t?.id === g.id))
 
-  const COLS = 7
+  // Mobile: 3 cols, Desktop: 7 cols
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
+  const COLS = isMobile ? 3 : 7
   const columns = Array.from({ length: COLS }, () => [])
   deckGames.forEach((game, i) => {
     columns[i % COLS].push(game)
@@ -147,7 +156,7 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
   const handleShare = async () => {
     const filled = top10.filter(Boolean)
     if (filled.length === 0) {
-      alert('Add Some Games!')
+      alert('Pehle Top 10 mein kuch games add karo!')
       return
     }
     const minimal = filled.map(g => ({
@@ -186,28 +195,29 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
 
         {/* TOP 10 */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-yellow-400">🏆 My Top 10</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-yellow-400">🏆 My Top 10</h2>
             <button
               onClick={handleShare}
-              className={`px-5 py-2 rounded-full text-sm font-bold transition-all
+              className={`px-3 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all
                 ${copied
                   ? 'bg-green-500 text-white'
                   : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
             >
-              {copied ? '✅ Link Copied!' : '🔗 Share Top 10'}
+              {copied ? '✅ Copied!' : '🔗 Share'}
             </button>
           </div>
 
+          {/* Mobile: 5 cols per row x 2 rows, Desktop: 10 in one row */}
           <SortableContext items={top10Ids} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-5 lg:grid-cols-10 gap-3">
+            <div className="grid grid-cols-5 sm:grid-cols-5 lg:grid-cols-10 gap-2 sm:gap-3">
               {top10.map((game, index) => (
                 <div key={index} className="relative">
-                  <div className={`absolute -top-2 -left-2 z-10 w-7 h-7 rounded-full 
+                  <div className={`absolute -top-2 -left-2 z-10 w-5 h-5 sm:w-7 sm:h-7 rounded-full 
                     flex items-center justify-center text-xs font-black shadow-lg
                     ${index === 0 ? 'bg-yellow-400 text-black' :
                       index === 1 ? 'bg-gray-300 text-black' :
@@ -229,24 +239,23 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
 
         {/* MY DECK */}
         <div>
-          <h2 className="text-xl font-bold text-purple-400 mb-4">
+          <h2 className="text-lg sm:text-xl font-bold text-purple-400 mb-4">
             🃏 My Deck ({deckGames.length} games)
           </h2>
+          <p className="text-xs text-gray-500 mb-3 sm:hidden">
+            📱 Press & hold a card to drag it
+          </p>
 
           {deckGames.length === 0 ? (
             <div className="text-center text-gray-600 py-10">
               <p className="text-4xl mb-2">🎉</p>
-              <p>All games are in Top 10!</p>
+              <p>Sab games Top 10 mein hain!</p>
             </div>
           ) : (
             <SortableContext items={deckIds} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-7 gap-3">
-                {columns.map((col, colIndex) => (
-                  <div key={colIndex} className="flex flex-col gap-2">
-                    {col.map((game) => (
-                      <GameCard key={game.id} game={game} inTop10={false} />
-                    ))}
-                  </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-2 sm:gap-3">
+                {deckGames.map((game) => (
+                  <GameCard key={game.id} game={game} inTop10={false} />
                 ))}
               </div>
             </SortableContext>
@@ -256,11 +265,11 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
 
       <DragOverlay>
         {activeGame && (
-          <div className="rounded-xl overflow-hidden border-2 border-purple-500 w-32 shadow-2xl rotate-3 opacity-90">
+          <div className="rounded-xl overflow-hidden border-2 border-purple-500 w-24 sm:w-32 shadow-2xl rotate-3 opacity-90">
             <img
               src={activeGame.background_image}
               alt={activeGame.name}
-              className="w-full h-36 object-cover"
+              className="w-full h-28 sm:h-36 object-cover"
             />
             <div className="bg-gray-900 p-2">
               <p className="text-white text-xs font-bold truncate">{activeGame.name}</p>
