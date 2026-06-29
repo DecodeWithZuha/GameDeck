@@ -1,4 +1,4 @@
-const API_KEY = '91e1fc69cff647c5a9e53840fc3e170c'
+const API_KEY = import.meta.env.VITE_RAWG_API_KEY
 
 export const fetchGames = async (genre = '', search = '') => {
   const genreFilter = genre ? `&genres=${genre}` : ''
