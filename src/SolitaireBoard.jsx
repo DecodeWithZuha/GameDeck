@@ -156,7 +156,7 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
   const handleShare = async () => {
     const filled = top10.filter(Boolean)
     if (filled.length === 0) {
-      alert('Pehle Top 10 mein kuch games add karo!')
+      alert('Add Some Games!')
       return
     }
     const minimal = filled.map(g => ({
@@ -249,7 +249,7 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
           {deckGames.length === 0 ? (
             <div className="text-center text-gray-600 py-10">
               <p className="text-4xl mb-2">🎉</p>
-              <p>Sab games Top 10 mein hain!</p>
+              <p>All games are in your deck!</p>
             </div>
           ) : (
             <SortableContext items={deckIds} strategy={rectSortingStrategy}>
