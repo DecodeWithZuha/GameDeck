@@ -1,25 +1,55 @@
 import { useEffect, useState } from 'react'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from './firebase'
 
 export default function ShareView() {
   const [games, setGames] = useState([])
   const [userName, setUserName] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const data = params.get('picks')
-    const name = params.get('user')
-    if (name) setUserName(decodeURIComponent(name))
-    if (data) {
+    const loadShare = async () => {
+      const params = new URLSearchParams(window.location.search)
+      const shareId = params.get('share')
+
+      // Only proceed if there's an actual ID, not "true" or empty
+      if (!shareId || shareId === 'true') {
+        setLoading(false)
+        setNotFound(true)
+        return
+      }
+
       try {
-        const parsed = JSON.parse(decodeURIComponent(data))
-        setGames(parsed)
-      } catch (e) {
-        console.error('Invalid share link')
+        const ref = doc(db, 'shares', shareId)
+        const snap = await getDoc(ref)
+        if (snap.exists()) {
+          const data = snap.data()
+          setGames(data.picks || [])
+          setUserName(data.userName || '')
+        } else {
+          setNotFound(true)
+        }
+      } catch (err) {
+        console.error('Failed to load share:', err)
+        setNotFound(true)
+      } finally {
+        setLoading(false)
       }
     }
+
+    loadShare()
   }, [])
 
-  if (games.length === 0) {
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+        <p className="text-gray-400 text-xl">Loading picks...</p>
+      </div>
+    )
+  }
+
+  if (notFound || games.length === 0) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
         <p className="text-gray-400 text-xl">No picks found in this link 😢</p>

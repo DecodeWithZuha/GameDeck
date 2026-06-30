@@ -10,6 +10,15 @@ export const fetchGames = async (genre = '', search = '') => {
   return data.results
 }
 
+// Fetches a broad pool of well-rated games to use as recommendation candidates.
+export const fetchCandidatePool = async () => {
+  const res = await fetch(
+    `https://api.rawg.io/api/games?key=${API_KEY}&page_size=40&ordering=-rating&metacritic=70,100`
+  )
+  const data = await res.json()
+  return data.results
+}
+
 export const GENRES = [
   { name: 'Action', slug: 'action' },
   { name: 'RPG', slug: 'role-playing-games-rpg' },

@@ -19,7 +19,7 @@ function App() {
   const [dataLoading, setDataLoading] = useState(false)
 
   const params = new URLSearchParams(window.location.search)
-  const isShareView = params.get('share') === 'true'
+  const isShareView = params.has('share')
 
   // Auth listener
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -15,6 +15,10 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from './firebase'
+import { fetchCandidatePool } from './api'
+import { fetchRecommendations } from './recommend'
 
 function GameCard({ game, inTop10 = false }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -68,10 +72,34 @@ function DroppableSlot({ number, id }) {
   )
 }
 
+function RecommendationCard({ rec }) {
+  return (
+    <div className="rounded-xl overflow-hidden border-2 border-gray-700 hover:border-pink-400 transition-all shadow-xl">
+      <div className="relative">
+        <img
+          src={rec.background_image}
+          alt={rec.name}
+          className="w-full h-24 sm:h-32 object-cover"
+        />
+        <div className="absolute top-1.5 right-1.5 bg-pink-600 text-white text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-full shadow-lg">
+          {rec.match_percent}% match
+        </div>
+      </div>
+      <div className="bg-gray-900 p-1.5 sm:p-2">
+        <p className="text-white text-xs font-bold truncate">{rec.name}</p>
+        <p className="text-yellow-400 text-xs">⭐ {rec.rating}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function SolitaireBoard({ myList, setMyList, user }) {
   const [top10, setTop10] = useState(Array(10).fill(null))
   const [activeGame, setActiveGame] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [recommendations, setRecommendations] = useState([])
+  const [loadingRecs, setLoadingRecs] = useState(false)
 
   // Both PointerSensor (desktop) and TouchSensor (mobile) support
   const sensors = useSensors(
@@ -92,6 +120,29 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
   deckGames.forEach((game, i) => {
     columns[i % COLS].push(game)
   })
+
+  // Fetch genre-based recommendations whenever the user's deck changes
+  useEffect(() => {
+    if (myList.length === 0) {
+      setRecommendations([])
+      return
+    }
+    let cancelled = false
+    const run = async () => {
+      setLoadingRecs(true)
+      try {
+        const pool = await fetchCandidatePool()
+        const recs = await fetchRecommendations(myList, pool, 6)
+        if (!cancelled) setRecommendations(recs)
+      } catch (err) {
+        console.error('Recommendation fetch failed:', err)
+      } finally {
+        if (!cancelled) setLoadingRecs(false)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [myList])
 
   const handleDragStart = (event) => {
     const gameId = parseInt(event.active.id.toString().replace('card-', ''))
@@ -153,35 +204,52 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
     }
   }
 
+  // SECURE SHARE: instead of putting the full picks JSON in the URL
+  // (which exposes data and creates huge, unsafe links), we save the
+  // picks as a document in Firestore and only put the short doc ID
+  // in the URL. ShareView then fetches the data using that ID.
   const handleShare = async () => {
     const filled = top10.filter(Boolean)
     if (filled.length === 0) {
-      alert('Add Some Games!')
+      alert('Pehle Top 10 mein kuch games add karo!')
       return
     }
-    const minimal = filled.map(g => ({
-      id: g.id,
-      name: g.name,
-      background_image: g.background_image,
-      rating: g.rating,
-    }))
-    const data = encodeURIComponent(JSON.stringify(minimal))
-    const userName = encodeURIComponent(user?.displayName || 'A Gamer')
-    const link = `${window.location.origin}${window.location.pathname}?share=true&picks=${data}&user=${userName}`
 
+    setSharing(true)
     try {
-      await navigator.clipboard.writeText(link)
+      const minimal = filled.map(g => ({
+        id: g.id,
+        name: g.name,
+        background_image: g.background_image,
+        rating: g.rating,
+      }))
+
+      const docRef = await addDoc(collection(db, 'shares'), {
+        picks: minimal,
+        userName: user?.displayName || 'A Gamer',
+        createdAt: serverTimestamp(),
+      })
+
+      const link = `${window.location.origin}${window.location.pathname}?share=${docRef.id}`
+
+      try {
+        await navigator.clipboard.writeText(link)
+      } catch {
+        const ta = document.createElement('textarea')
+        ta.value = link
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+
       setCopied(true)
       setTimeout(() => setCopied(false), 3000)
-    } catch {
-      const ta = document.createElement('textarea')
-      ta.value = link
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 3000)
+    } catch (err) {
+      console.error('Failed to create share link:', err)
+      alert('Share link banane mein masla hua, dobara try karo.')
+    } finally {
+      setSharing(false)
     }
   }
 
@@ -203,16 +271,17 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
             <h2 className="text-lg sm:text-xl font-bold text-yellow-400">🏆 My Top 10</h2>
             <button
               onClick={handleShare}
+              disabled={sharing}
               className={`px-3 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all
                 ${copied
                   ? 'bg-green-500 text-white'
-                  : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
+                  : 'bg-purple-600 hover:bg-purple-700 text-white'}
+                ${sharing ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              {copied ? '✅ Copied!' : '🔗 Share'}
+              {sharing ? '⏳ Creating...' : copied ? '✅ Copied!' : '🔗 Share'}
             </button>
           </div>
 
-          {/* Mobile: 5 cols per row x 2 rows, Desktop: 10 in one row */}
           <SortableContext items={top10Ids} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-5 sm:grid-cols-5 lg:grid-cols-10 gap-2 sm:gap-3">
               {top10.map((game, index) => (
@@ -235,6 +304,35 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
           </SortableContext>
         </div>
 
+        {/* RECOMMENDATIONS */}
+        {myList.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg sm:text-xl font-bold text-pink-400 mb-1">
+              ✨ Recommended For You
+            </h2>
+            <p className="text-xs text-gray-500 mb-4">
+              Based on the genres in your deck (powered by KNN similarity)
+            </p>
+
+            {loadingRecs ? (
+              <div className="text-center text-gray-500 py-8">
+                <p className="text-2xl mb-2">🤖</p>
+                <p className="text-sm">Finding games you'll love...</p>
+              </div>
+            ) : recommendations.length === 0 ? (
+              <p className="text-gray-600 text-sm">
+                Add a few more games to get personalized recommendations.
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3">
+                {recommendations.map(rec => (
+                  <RecommendationCard key={rec.id} rec={rec} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="border-t border-gray-700 mb-6" />
 
         {/* MY DECK */}
@@ -249,7 +347,7 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
           {deckGames.length === 0 ? (
             <div className="text-center text-gray-600 py-10">
               <p className="text-4xl mb-2">🎉</p>
-              <p>All games are in your deck!</p>
+              <p>Sab games Top 10 mein hain!</p>
             </div>
           ) : (
             <SortableContext items={deckIds} strategy={rectSortingStrategy}>
