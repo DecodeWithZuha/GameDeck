@@ -2,7 +2,7 @@
 
 A personal game curation and discovery platform where you can browse games, build your collection, rank your Top 10, get recommendations, and play mini-games using your own game covers.
 
-Live demo: gamedeck-bice.vercel.app
+Live demo: https://gamedeck-bice.vercel.app/
 
 
 ## Features
