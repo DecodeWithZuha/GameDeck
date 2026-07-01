@@ -5,6 +5,8 @@ import { auth, db } from './firebase'
 import { fetchGames, GENRES } from './api'
 import SolitaireBoard from './SolitaireBoard'
 import ShareView from './ShareView'
+import PuzzleGame from './PuzzleGame'
+import PuzzleResultView from './PuzzleResultView'
 import Auth from './Auth'
 
 function App() {
@@ -20,8 +22,8 @@ function App() {
 
   const params = new URLSearchParams(window.location.search)
   const isShareView = params.has('share')
+  const isPuzzleResult = params.has('puzzleResult')
 
-  // Auth listener
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
@@ -41,14 +43,12 @@ function App() {
     return () => unsub()
   }, [])
 
-  // Save to Firestore whenever myList changes
   useEffect(() => {
     if (!user || dataLoading) return
     const ref = doc(db, 'users', user.uid)
     setDoc(ref, { myList }, { merge: true })
   }, [myList, user])
 
-  // Fetch games
   useEffect(() => {
     setLoading(true)
     fetchGames(selectedGenre, search).then(data => {
@@ -74,11 +74,10 @@ function App() {
   }
 
   if (isShareView) return <ShareView />
+  if (isPuzzleResult) return <PuzzleResultView />
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-
-      {/* Header */}
       <div className="p-5 border-b border-gray-800 flex justify-between items-center">
         <h1 className="text-3xl font-bold text-purple-400">🎮 GameDeck</h1>
         <div className="flex items-center gap-4">
@@ -91,7 +90,6 @@ function App() {
         </div>
       </div>
 
-      {/* Not logged in */}
       {!user ? (
         <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-6">
           <p className="text-6xl mb-6">🎮</p>
@@ -103,88 +101,61 @@ function App() {
         </div>
       ) : (
         <>
-          {/* Tabs */}
-          <div className="flex gap-2 px-6 pt-5">
-            <button
-              onClick={() => setActiveTab('browse')}
+          <div className="flex gap-2 px-6 pt-5 flex-wrap">
+            <button onClick={() => setActiveTab('browse')}
               className={`px-5 py-2 rounded-full text-sm font-bold transition-all
-                ${activeTab === 'browse'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-            >
+                ${activeTab === 'browse' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
               🕹️ Browse Games
             </button>
-            <button
-              onClick={() => setActiveTab('mydeck')}
+            <button onClick={() => setActiveTab('mydeck')}
               className={`px-5 py-2 rounded-full text-sm font-bold transition-all
-                ${activeTab === 'mydeck'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-            >
+                ${activeTab === 'mydeck' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
               🃏 My Deck {myList.length > 0 && `(${myList.length})`}
+            </button>
+            <button onClick={() => setActiveTab('puzzle')}
+              className={`px-5 py-2 rounded-full text-sm font-bold transition-all
+                ${activeTab === 'puzzle' ? 'bg-cyan-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
+              🧩 Puzzle Game
             </button>
           </div>
 
-          {/* Browse Tab */}
           {activeTab === 'browse' && (
             <>
               <div className="px-6 pt-5 pb-2">
                 <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    value={searchInput}
-                    onChange={e => setSearchInput(e.target.value)}
+                  <input type="text" value={searchInput} onChange={e => setSearchInput(e.target.value)}
                     placeholder="Search games... e.g. GTA, Minecraft"
-                    className="flex-1 bg-gray-800 border border-gray-700 rounded-full px-5 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-all"
-                  />
-                  <button
-                    type="submit"
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-full text-sm font-bold transition-all"
-                  >
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded-full px-5 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-all" />
+                  <button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-full text-sm font-bold transition-all">
                     🔍 Search
                   </button>
                   {search && (
-                    <button
-                      type="button"
-                      onClick={() => { setSearch(''); setSearchInput('') }}
-                      className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-full text-sm transition-all"
-                    >
+                    <button type="button" onClick={() => { setSearch(''); setSearchInput('') }}
+                      className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-full text-sm transition-all">
                       ✕ Clear
                     </button>
                   )}
                 </form>
-
                 <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => { setSelectedGenre(''); setSearch(''); setSearchInput('') }}
+                  <button onClick={() => { setSelectedGenre(''); setSearch(''); setSearchInput('') }}
                     className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all
-                      ${selectedGenre === '' && !search
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                  >
+                      ${selectedGenre === '' && !search ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                     All
                   </button>
                   {GENRES.map(genre => (
-                    <button
-                      key={genre.slug}
-                      onClick={() => { setSelectedGenre(genre.slug); setSearch(''); setSearchInput('') }}
+                    <button key={genre.slug} onClick={() => { setSelectedGenre(genre.slug); setSearch(''); setSearchInput('') }}
                       className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all
-                        ${selectedGenre === genre.slug
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-                    >
+                        ${selectedGenre === genre.slug ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                       {genre.name}
                     </button>
                   ))}
                 </div>
               </div>
-
               {search && (
                 <p className="px-6 py-2 text-gray-400 text-sm">
                   Results for: <span className="text-purple-400 font-semibold">"{search}"</span>
                 </p>
               )}
-
               {loading ? (
                 <div className="text-center text-gray-500 mt-24">
                   <p className="text-4xl mb-3">🎮</p>
@@ -198,32 +169,20 @@ function App() {
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 p-6">
                   {games.map(game => (
-                    <div
-                      key={game.id}
-                      className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all group"
-                    >
+                    <div key={game.id} className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-purple-500 transition-all group">
                       <div className="relative">
-                        <img
-                          src={game.background_image}
-                          alt={game.name}
-                          className="w-full h-40 object-cover group-hover:scale-105 transition-all duration-300"
-                        />
-                        <button
-                          onClick={() => toggleGame(game)}
+                        <img src={game.background_image} alt={game.name}
+                          className="w-full h-40 object-cover group-hover:scale-105 transition-all duration-300" />
+                        <button onClick={() => toggleGame(game)}
                           className={`absolute top-2 right-2 px-2 py-1 rounded-lg text-xs font-bold transition-all
-                            ${isAdded(game)
-                              ? 'bg-green-500 text-white'
-                              : 'bg-black/70 text-white hover:bg-purple-600'}`}
-                        >
+                            ${isAdded(game) ? 'bg-green-500 text-white' : 'bg-black/70 text-white hover:bg-purple-600'}`}>
                           {isAdded(game) ? '✓ Added' : '+ Add'}
                         </button>
                       </div>
                       <div className="p-3">
                         <p className="text-sm font-semibold text-white truncate">{game.name}</p>
                         <p className="text-xs text-yellow-400 mt-1">⭐ {game.rating}</p>
-                        <p className="text-xs text-gray-500 mt-1 truncate">
-                          {game.genres?.map(g => g.name).join(', ')}
-                        </p>
+                        <p className="text-xs text-gray-500 mt-1 truncate">{game.genres?.map(g => g.name).join(', ')}</p>
                       </div>
                     </div>
                   ))}
@@ -232,9 +191,12 @@ function App() {
             </>
           )}
 
-          {/* My Deck Tab */}
           {activeTab === 'mydeck' && (
             <SolitaireBoard myList={myList} setMyList={setMyList} user={user} />
+          )}
+
+          {activeTab === 'puzzle' && (
+            <PuzzleGame myList={myList} user={user} />
           )}
         </>
       )}

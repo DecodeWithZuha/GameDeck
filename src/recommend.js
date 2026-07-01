@@ -1,36 +1,59 @@
-const RECOMMEND_API_URL = import.meta.env.VITE_RECOMMEND_API_URL
+// Pure JS genre-based similarity recommendations
+// Uses cosine similarity on genre vectors (same logic as KNN with cosine distance)
+// No external backend needed — runs entirely in the browser
 
-// Sends the user's deck + a candidate pool to the Python KNN backend
-// and returns recommended games with a match_percent score.
-export const fetchRecommendations = async (userDeck, candidatePool, topN = 6) => {
-  if (!RECOMMEND_API_URL) {
-    console.warn('VITE_RECOMMEND_API_URL is not set; skipping recommendations')
-    return []
+const buildVocab = (games) => {
+  const genres = new Set()
+  games.forEach(g => (g.genres || []).forEach(genre => genres.add(genre.name || genre)))
+  return [...genres].sort()
+}
+
+const vectorize = (game, vocab) => {
+  const vec = new Array(vocab.length).fill(0)
+  ;(game.genres || []).forEach(genre => {
+    const name = genre.name || genre
+    const idx = vocab.indexOf(name)
+    if (idx !== -1) vec[idx] = 1
+  })
+  return vec
+}
+
+const cosineSim = (a, b) => {
+  let dot = 0, magA = 0, magB = 0
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i]
+    magA += a[i] * a[i]
+    magB += b[i] * b[i]
   }
+  if (magA === 0 || magB === 0) return 0
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB))
+}
+
+export const getRecommendations = (userDeck, candidatePool, topN = 6) => {
   if (!userDeck.length || !candidatePool.length) return []
 
-  const toPayload = (g) => ({
-    id: g.id,
-    name: g.name,
-    background_image: g.background_image,
-    rating: g.rating || 0,
-    genres: (g.genres || []).map(genre => genre.name),
+  const deckIds = new Set(userDeck.map(g => g.id))
+  const candidates = candidatePool.filter(g => !deckIds.has(g.id))
+  if (!candidates.length) return []
+
+  const vocab = buildVocab([...userDeck, ...candidates])
+  if (!vocab.length) return []
+
+  // User profile = average of all deck game vectors
+  const deckVecs = userDeck.map(g => vectorize(g, vocab))
+  const profile = vocab.map((_, i) => {
+    const sum = deckVecs.reduce((acc, v) => acc + v[i], 0)
+    return sum / deckVecs.length
   })
 
-  try {
-    const res = await fetch(`${RECOMMEND_API_URL}/recommend`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_deck: userDeck.map(toPayload),
-        candidate_pool: candidatePool.map(toPayload),
-        top_n: topN,
-      }),
-    })
-    if (!res.ok) throw new Error(`Recommendation API error: ${res.status}`)
-    return await res.json()
-  } catch (err) {
-    console.error('Failed to fetch recommendations:', err)
-    return []
-  }
+  const scored = candidates.map(game => {
+    const vec = vectorize(game, vocab)
+    const sim = cosineSim(profile, vec)
+    return { ...game, match_percent: Math.round(sim * 100 * 10) / 10 }
+  })
+
+  return scored
+    .filter(g => g.match_percent > 0)
+    .sort((a, b) => b.match_percent - a.match_percent)
+    .slice(0, topN)
 }
