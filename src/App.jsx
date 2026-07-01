@@ -82,22 +82,8 @@ function App() {
   // Route to standalone share/result pages
   if (isShareView) return <ShareView />
   if (isPuzzleResult) return <PuzzleResultView />
-  // Memory and bubble results just show a simple message for now (can be expanded)
-  if (isMemoryResult || isBubbleResult) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-6 text-center">
-        <p className="text-6xl mb-4">🏆</p>
-        <h1 className="text-2xl font-bold text-purple-400 mb-4">GameDeck Result</h1>
-        <p className="text-gray-400 mb-8">
-          {isMemoryResult ? 'A Memory Match result was shared with you!' : 'A Bubble Shooter score was shared with you!'}
-        </p>
-        <button onClick={() => window.location.href = window.location.origin}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-full font-bold transition-all">
-          🎮 Play GameDeck Yourself
-        </button>
-      </div>
-    )
-  }
+  if (isMemoryResult) return <MemoryResultView />
+  if (isBubbleResult) return <BubbleResultView />
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
