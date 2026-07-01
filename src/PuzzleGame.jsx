@@ -159,7 +159,7 @@ export default function PuzzleGame({ myList, user }) {
       setTimeout(() => setShareCopied(false), 3000)
     } catch (err) {
       console.error('Failed to share puzzle result:', err)
-      alert('Result share karne mein masla hua, dobara try karo.')
+      alert('ERROR. Try again.')
     } finally {
       setSharing(false)
     }
@@ -171,13 +171,13 @@ export default function PuzzleGame({ myList, user }) {
       <div className="p-3 sm:p-6">
         <h2 className="text-lg sm:text-2xl font-bold text-cyan-400 mb-2">🧩 Puzzle Game</h2>
         <p className="text-gray-400 text-sm mb-6">
-          Apni deck se ek game choose karo aur uska cover sliding puzzle bana do!
+          Choose a game from your deck and select a difficulty to start the puzzle.
         </p>
 
         {myList.length === 0 ? (
           <div className="text-center text-gray-600 py-16">
             <p className="text-4xl mb-3">🃏</p>
-            <p>Pehle Browse Games se kuch games apni deck mein add karo.</p>
+            <p>Choose a game from your deck to start the puzzle.</p>
           </div>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
