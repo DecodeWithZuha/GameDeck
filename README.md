@@ -35,12 +35,12 @@ Sign in with Google. Your deck persists across sessions via Firestore.
 ## Tech Stack
 
 
-React + Vite
-Tailwind CSS
-Firebase (Authentication + Firestore)
-RAWG.io API
-@dnd-kit (drag and drop)
-Vercel (hosting)
+React + Vite, 
+Tailwind CSS, 
+Firebase (Authentication + Firestore), 
+RAWG.io API, 
+@dnd-kit (drag and drop), 
+Vercel (hosting).
 
 ## How Recommendations Work
 
