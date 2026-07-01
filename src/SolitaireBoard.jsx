@@ -220,7 +220,7 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
   // ---------- Secure share ----------
   const handleShare = async () => {
     const filled = top10.filter(Boolean)
-    if (filled.length === 0) { alert('Pehle Top 10 mein kuch games add karo!'); return }
+    if (filled.length === 0) { alert('Add games'); return }
     setSharing(true)
     try {
       const minimal = filled.map(g => ({ id: g.id, name: g.name, background_image: g.background_image, rating: g.rating }))
@@ -233,7 +233,7 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
         document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta)
       }
       setCopied(true); setTimeout(() => setCopied(false), 3000)
-    } catch (err) { console.error(err); alert('Share mein masla, dobara try karo.') }
+    } catch (err) { console.error(err); alert('Try Again') }
     finally { setSharing(false) }
   }
 
@@ -249,7 +249,7 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
         {/* Mobile hint */}
         {mobile && (
           <div className="mb-4 bg-cyan-900/30 border border-cyan-700 rounded-xl px-4 py-2 text-xs text-cyan-300">
-            📱 <strong>Deck se game tap karo</strong> (highlight hoga) → phir Top 10 ka khaali slot tap karo — wahan chala jayega!
+            📱 <strong>Tap the game </strong> then move it to the slots.
           </div>
         )}
 
@@ -300,7 +300,7 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
                 <p className="text-sm">Finding games you'll love...</p>
               </div>
             ) : recommendations.length === 0 ? (
-              <p className="text-gray-600 text-sm">No recommendations found — add more games to your deck!</p>
+              <p className="text-gray-600 text-sm">No recommendations found! Add more games to your deck!</p>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3">
                 {recommendations.map(rec => <RecommendationCard key={rec.id} rec={rec} />)}
