@@ -319,15 +319,15 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
           {mobile && (
             <p className="text-xs text-gray-500 mb-3">
               {selectedCard
-                ? `"${selectedCard.name}" selected — Top 10 ka khaali slot tap karo`
-                : 'Game tap karo → phir Top 10 mein slot tap karo'}
+                ? `"${selectedCard.name}" selected. Now tap a Top 10 slot to place it`
+                : 'Tap a game to select it, then tap a Top 10 slot to place it'}
             </p>
           )}
 
           {deckGames.length === 0 ? (
             <div className="text-center text-gray-600 py-10">
               <p className="text-4xl mb-2">🎉</p>
-              <p>Sab games Top 10 mein hain!</p>
+              <p>All games are in top 10!</p>
             </div>
           ) : (
             <SortableContext items={deckIds} strategy={rectSortingStrategy}>
