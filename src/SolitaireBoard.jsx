@@ -72,33 +72,12 @@ function DroppableSlot({ number, id }) {
   )
 }
 
-function RecommendationCard({ rec }) {
-  return (
-    <div className="rounded-xl overflow-hidden border-2 border-gray-700 hover:border-pink-400 transition-all shadow-xl">
-      <div className="relative">
-        <img
-          src={rec.background_image}
-          alt={rec.name}
-          className="w-full h-24 sm:h-32 object-cover"
-        />
-        <div className="absolute top-1.5 right-1.5 bg-pink-600 text-white text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-full shadow-lg">
-          {rec.match_percent}% match
-        </div>
-      </div>
-      <div className="bg-gray-900 p-1.5 sm:p-2">
-        <p className="text-white text-xs font-bold truncate">{rec.name}</p>
-        <p className="text-yellow-400 text-xs">⭐ {rec.rating}</p>
-      </div>
-    </div>
-  )
-}
 
 export default function SolitaireBoard({ myList, setMyList, user }) {
   const [top10, setTop10] = useState(Array(10).fill(null))
   const [activeGame, setActiveGame] = useState(null)
   const [copied, setCopied] = useState(false)
   const [sharing, setSharing] = useState(false)
-  const [recommendations, setRecommendations] = useState([])
   const [loadingRecs, setLoadingRecs] = useState(false)
 
   // Both PointerSensor (desktop) and TouchSensor (mobile) support
@@ -121,30 +100,7 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
     columns[i % COLS].push(game)
   })
 
-  // Fetch genre-based recommendations whenever the user's deck changes
-  useEffect(() => {
-    if (myList.length === 0) {
-      setRecommendations([])
-      return
-    }
-    let cancelled = false
-    const run = async () => {
-      setLoadingRecs(true)
-      try {
-        const pool = await fetchCandidatePool()
-        const recs = await fetchRecommendations(myList, pool, 6)
-        if (!cancelled) setRecommendations(recs)
-      } catch (err) {
-        console.error('Recommendation fetch failed:', err)
-      } finally {
-        if (!cancelled) setLoadingRecs(false)
-      }
-    }
-    run()
-    return () => { cancelled = true }
-  }, [myList])
-
-  const handleDragStart = (event) => {
+    const handleDragStart = (event) => {
     const gameId = parseInt(event.active.id.toString().replace('card-', ''))
     setActiveGame(myList.find(g => g.id === gameId) || null)
   }
@@ -303,35 +259,6 @@ export default function SolitaireBoard({ myList, setMyList, user }) {
             </div>
           </SortableContext>
         </div>
-
-        {/* RECOMMENDATIONS */}
-        {myList.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg sm:text-xl font-bold text-pink-400 mb-1">
-              ✨ Recommended For You
-            </h2>
-            <p className="text-xs text-gray-500 mb-4">
-              Based on the genres in your deck (powered by KNN similarity)
-            </p>
-
-            {loadingRecs ? (
-              <div className="text-center text-gray-500 py-8">
-                <p className="text-2xl mb-2">🤖</p>
-                <p className="text-sm">Finding games you'll love...</p>
-              </div>
-            ) : recommendations.length === 0 ? (
-              <p className="text-gray-600 text-sm">
-                Add a few more games to get personalized recommendations.
-              </p>
-            ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3">
-                {recommendations.map(rec => (
-                  <RecommendationCard key={rec.id} rec={rec} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         <div className="border-t border-gray-700 mb-6" />
 
