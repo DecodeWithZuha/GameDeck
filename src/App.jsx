@@ -9,6 +9,8 @@ import PuzzleGame from './PuzzleGame'
 import PuzzleResultView from './PuzzleResultView'
 import MemoryGame from './MemoryGame'
 import BubbleShooter from './BubbleShooter'
+import MemoryResultView from './MemoryResultView'
+import BubbleResultView from './BubbleResultView'
 import Auth from './Auth'
 
 function App() {
